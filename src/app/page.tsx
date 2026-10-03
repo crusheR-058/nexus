@@ -72,7 +72,6 @@ export default function NexusHome() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [showStatusGreeting, setShowStatusGreeting] = useState(true);
-  const [isLoadedFromStorage, setIsLoadedFromStorage] = useState(false);
 
   // Load user projects from localStorage on mount (No mock data loaded by default!)
   useEffect(() => {
@@ -87,8 +86,6 @@ export default function NexusHome() {
       }
     } catch (e) {
       console.warn('Could not read projects from localStorage', e);
-    } finally {
-      setIsLoadedFromStorage(true);
     }
   }, []);
 
@@ -198,18 +195,6 @@ export default function NexusHome() {
     'portfolio',
     'analytics'
   ].includes(activeView);
-
-  // If still checking initial client storage, render sleek loader shell
-  if (!isLoadedFromStorage) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#050809] text-cyan-400 font-mono text-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          <span>INITIALIZING NEXUS WORKSPACE...</span>
-        </div>
-      </div>
-    );
-  }
 
   // EMPTY STATE: If no projects uploaded yet, show EmptyWorkspaceView
   if (projectBundles.length === 0) {
