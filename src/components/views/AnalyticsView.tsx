@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 interface AnalyticsViewProps {
-  project: Project;
+  project?: Project | null;
   onNavigateToView: (view: string) => void;
 }
 
@@ -22,6 +22,7 @@ export default function AnalyticsView({
   project,
   onNavigateToView
 }: AnalyticsViewProps) {
+  if (!project) return null;
   const dimensions = [
     { label: 'Code Execution', score: project.healthDimensions.execution, status: 'Optimal', color: 'from-cyan-500 to-teal-400' },
     { label: 'Documentation', score: project.healthDimensions.documentation, status: 'Lagging', color: 'from-blue-500 to-indigo-500' },

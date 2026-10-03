@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 interface ProjectWorkspaceHeaderProps {
-  project: Project;
+  project?: Project | null;
   activeView: NavView;
   onSelectView: (view: NavView) => void;
 }
@@ -32,6 +32,7 @@ export default function ProjectWorkspaceHeader({
   activeView,
   onSelectView
 }: ProjectWorkspaceHeaderProps) {
+  if (!project) return null;
   const tabs = [
     { id: 'overview', label: 'Graph', icon: Network },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, count: 7 },

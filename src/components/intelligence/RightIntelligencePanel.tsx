@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 interface RightIntelligencePanelProps {
-  activeProject: Project;
+  activeProject?: Project | null;
   selectedNode: GraphNode | null;
   insights: AIInsight[];
   onClearSelection: () => void;
@@ -41,6 +41,7 @@ export default function RightIntelligencePanel({
   onNavigateToView,
   onSelectTask
 }: RightIntelligencePanelProps) {
+  if (!activeProject) return null;
   return (
     <aside className="w-80 h-full glass-panel border-l border-white/10 flex flex-col z-30 select-none overflow-hidden animate-in fade-in duration-300">
       {/* Panel Header */}

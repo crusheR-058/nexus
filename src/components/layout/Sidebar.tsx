@@ -24,7 +24,8 @@ import {
   ShieldCheck,
   Sparkles,
   FlaskConical,
-  Globe2
+  Globe2,
+  FolderUp
 } from 'lucide-react';
 
 export type NavView = 
@@ -49,9 +50,10 @@ export type NavView =
 interface SidebarProps {
   activeView: NavView;
   onSelectView: (view: NavView) => void;
-  activeProject: Project;
+  activeProject?: Project | null;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  onOpenUploadModal?: () => void;
 }
 
 export default function Sidebar({
@@ -59,7 +61,8 @@ export default function Sidebar({
   onSelectView,
   activeProject,
   isCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  onOpenUploadModal
 }: SidebarProps) {
   const projectNav = [
     { id: 'overview', label: 'Intelligence Graph', icon: Network, badge: 'Hero' },
@@ -130,18 +133,28 @@ export default function Sidebar({
       {/* Active Project Pill Indicator */}
       {!isCollapsed && (
         <div className="px-3 pt-3 pb-1">
-          <div 
-            onClick={() => onSelectView('overview')}
-            className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 cursor-pointer transition-all space-y-1 shadow-[0_0_15px_rgba(0,229,255,0.1)]"
-          >
-            <div className="flex items-center justify-between text-[10px] font-mono">
-              <span className="text-cyan-400 uppercase font-semibold">Active Project</span>
-              <span className="text-slate-400">{activeProject.progress}%</span>
+          {activeProject ? (
+            <div 
+              onClick={() => onSelectView('overview')}
+              className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 cursor-pointer transition-all space-y-1 shadow-[0_0_15px_rgba(0,229,255,0.1)]"
+            >
+              <div className="flex items-center justify-between text-[10px] font-mono">
+                <span className="text-cyan-400 uppercase font-semibold">Active Project</span>
+                <span className="text-slate-400">{activeProject.progress}%</span>
+              </div>
+              <div className="text-xs font-bold text-white truncate">
+                {activeProject.name}
+              </div>
             </div>
-            <div className="text-xs font-bold text-white truncate">
-              {activeProject.name}
-            </div>
-          </div>
+          ) : (
+            <button
+              onClick={() => onOpenUploadModal && onOpenUploadModal()}
+              className="w-full p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-500/20 text-cyan-300 transition-all flex items-center justify-center gap-2 text-xs font-semibold shadow-[0_0_12px_rgba(0,229,255,0.1)]"
+            >
+              <FolderUp className="w-4 h-4" />
+              <span>Upload Local Project</span>
+            </button>
+          )}
         </div>
       )}
 

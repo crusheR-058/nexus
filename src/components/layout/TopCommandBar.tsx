@@ -13,86 +13,116 @@ import {
   GitBranch, 
   CheckCircle2, 
   AlertTriangle,
-  FolderGit2
+  FolderGit2,
+  FolderUp,
+  Plus
 } from 'lucide-react';
 
 interface TopCommandBarProps {
   projects: Project[];
-  activeProject: Project;
+  activeProject?: Project | null;
   onSelectProject: (project: Project) => void;
   onOpenCommandPalette: () => void;
+  onOpenUploadModal: () => void;
 }
 
 export default function TopCommandBar({
   projects,
   activeProject,
   onSelectProject,
-  onOpenCommandPalette
+  onOpenCommandPalette,
+  onOpenUploadModal
 }: TopCommandBarProps) {
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   return (
     <header className="h-14 w-full glass-panel border-b border-white/10 px-4 flex items-center justify-between z-30 select-none">
-      {/* Left: Project Selector Breadcrumb */}
-      <div className="flex items-center gap-3">
-        <div className="relative">
-          <button
-            onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-500/30 transition-all text-xs"
-          >
-            <FolderGit2 className="w-3.5 h-3.5 text-cyan-400" />
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-mono text-[11px]">Project:</span>
-              <span className="font-semibold text-white tracking-tight">
-                {activeProject.name}
+      {/* Left: Project Selector Breadcrumb & Upload Button */}
+      <div className="flex items-center gap-2.5">
+        {activeProject ? (
+          <div className="relative">
+            <button
+              onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-500/30 transition-all text-xs"
+            >
+              <FolderGit2 className="w-3.5 h-3.5 text-cyan-400" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-400 font-mono text-[11px]">Project:</span>
+                <span className="font-semibold text-white tracking-tight">
+                  {activeProject.name}
+                </span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800">
+                {activeProject.progress}%
               </span>
-            </div>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800">
-              {activeProject.progress}%
-            </span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
-          </button>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
 
-          {/* Project Dropdown Menu */}
-          {isProjectDropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-72 rounded-xl glass-panel-cyan border border-cyan-500/30 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2">
-              <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 px-2 py-1">
-                Active Projects
-              </div>
-              <div className="space-y-1 mt-1">
-                {projects.map(p => (
+            {/* Project Dropdown Menu */}
+            {isProjectDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-72 rounded-xl glass-panel-cyan border border-cyan-500/30 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 px-2 py-1">
+                  Active Projects
+                </div>
+                <div className="space-y-1 mt-1">
+                  {projects.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        onSelectProject(p);
+                        setIsProjectDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors ${
+                        p.id === activeProject.id
+                          ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
+                      }`}
+                    >
+                      <div className="truncate mr-2">
+                        <div className="font-medium truncate">{p.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono truncate">{p.tagline}</div>
+                      </div>
+                      <span className="text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded bg-black/40 text-cyan-400">
+                        {p.progress}%
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pt-2 mt-2 border-t border-white/10">
                   <button
-                    key={p.id}
                     onClick={() => {
-                      onSelectProject(p);
                       setIsProjectDropdownOpen(false);
+                      onOpenUploadModal();
                     }}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors ${
-                      p.id === activeProject.id
-                        ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40'
-                        : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
-                    }`}
+                    className="w-full flex items-center justify-center gap-2 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-medium transition-all"
                   >
-                    <div className="truncate mr-2">
-                      <div className="font-medium truncate">{p.name}</div>
-                      <div className="text-[10px] text-slate-400 font-mono truncate">{p.tagline}</div>
-                    </div>
-                    <span className="text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded bg-black/40 text-cyan-400">
-                      {p.progress}%
-                    </span>
+                    <FolderUp className="w-3.5 h-3.5" />
+                    <span>Upload Local Project</span>
                   </button>
-                ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        ) : null}
+
+        {/* Upload Project Button */}
+        <button
+          onClick={onOpenUploadModal}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition-all text-xs font-semibold shadow-[0_0_12px_rgba(0,229,255,0.2)]"
+        >
+          <FolderUp className="w-3.5 h-3.5" />
+          <span>Upload Project</span>
+        </button>
 
         {/* Branch / Git indicator */}
-        <div className="hidden md:flex items-center gap-1.5 text-xs font-mono text-slate-400 px-2 py-1 rounded bg-white/5 border border-white/5">
-          <GitBranch className="w-3 h-3 text-slate-400" />
-          <span>{activeProject.branch}</span>
-        </div>
+        {activeProject && (
+          <div className="hidden md:flex items-center gap-1.5 text-xs font-mono text-slate-400 px-2 py-1 rounded bg-white/5 border border-white/5">
+            <GitBranch className="w-3 h-3 text-slate-400" />
+            <span>{activeProject.branch}</span>
+          </div>
+        )}
       </div>
 
       {/* Center: Global Search & Command Bar Trigger (⌘K) */}

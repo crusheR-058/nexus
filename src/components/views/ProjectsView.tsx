@@ -12,21 +12,24 @@ import {
   Layers, 
   Cpu, 
   ExternalLink,
-  Sparkles
+  Sparkles,
+  FolderUp
 } from 'lucide-react';
 
 interface ProjectsViewProps {
   projects: Project[];
-  activeProject: Project;
+  activeProject?: Project | null;
   onSelectProject: (project: Project) => void;
   onNavigateToView: (view: string) => void;
+  onOpenUploadModal?: () => void;
 }
 
 export default function ProjectsView({
   projects,
   activeProject,
   onSelectProject,
-  onNavigateToView
+  onNavigateToView,
+  onOpenUploadModal
 }: ProjectsViewProps) {
   const [showNewModal, setShowNewModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -50,19 +53,31 @@ export default function ProjectsView({
           </p>
         </div>
 
-        <button
-          onClick={() => setShowNewModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-semibold text-xs transition-all shadow-[0_0_20px_rgba(0,229,255,0.4)] shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Engineering Project</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {onOpenUploadModal && (
+            <button
+              onClick={onOpenUploadModal}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs transition-all shadow-[0_0_20px_rgba(0,229,255,0.3)] hover:scale-105 shrink-0"
+            >
+              <FolderUp className="w-4 h-4" />
+              <span>Upload Local Project</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium text-xs transition-all hover:scale-105 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Blank Project</span>
+          </button>
+        </div>
       </div>
 
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects.map(proj => {
-          const isActive = proj.id === activeProject.id;
+          const isActive = proj.id === activeProject?.id;
           return (
             <div
               key={proj.id}

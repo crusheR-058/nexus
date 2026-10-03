@@ -19,12 +19,13 @@ import {
 } from 'lucide-react';
 
 interface PortfolioViewProps {
-  project: Project;
+  project?: Project | null;
 }
 
 export default function PortfolioView({
   project
 }: PortfolioViewProps) {
+  if (!project) return null;
   const [selectedDocType, setSelectedDocType] = useState<string>('readme');
   const [copied, setCopied] = useState(false);
 

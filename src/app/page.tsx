@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Project, 
   GraphNode, 
+  GraphEdge,
+  ProjectBundle,
   TaskStatus 
 } from '@/types';
 import { 
@@ -37,6 +39,8 @@ import ProjectGraph from '@/components/graph/ProjectGraph';
 import RightIntelligencePanel from '@/components/intelligence/RightIntelligencePanel';
 import AICommandBar from '@/components/ai/AICommandBar';
 import CommandPalette from '@/components/command/CommandPalette';
+import UploadProjectModal from '@/components/modals/UploadProjectModal';
+import EmptyWorkspaceView from '@/components/views/EmptyWorkspaceView';
 
 import ProjectsView from '@/components/views/ProjectsView';
 import TasksView from '@/components/views/TasksView';
@@ -55,17 +59,49 @@ import AnalyticsView from '@/components/views/AnalyticsView';
 import SettingsView from '@/components/views/SettingsView';
 import UniverseView from '@/components/views/UniverseView';
 
-import { Sparkles, AlertTriangle, CheckCircle2, ChevronRight, X } from 'lucide-react';
+import { Sparkles, AlertTriangle, CheckCircle2, ChevronRight, X, FolderUp } from 'lucide-react';
+
+const LOCAL_STORAGE_KEY = 'nexus_user_projects_v2';
 
 export default function NexusHome() {
   const [activeView, setActiveView] = useState<NavView>('overview');
-  const [activeProject, setActiveProject] = useState<Project>(mockProjects[0]);
+  const [projectBundles, setProjectBundles] = useState<ProjectBundle[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [showStatusGreeting, setShowStatusGreeting] = useState(true);
+  const [isLoadedFromStorage, setIsLoadedFromStorage] = useState(false);
 
-  // Global Keyboard shortcut listener for Cmd+K / Ctrl+K
+  // Load user projects from localStorage on mount (No mock data loaded by default!)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        const parsed: ProjectBundle[] = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProjectBundles(parsed);
+          setActiveProjectId(parsed[0].project.id);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read projects from localStorage', e);
+    } finally {
+      setIsLoadedFromStorage(true);
+    }
+  }, []);
+
+  // Save projects to localStorage whenever updated
+  const saveProjectsToStorage = (bundles: ProjectBundle[]) => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(bundles));
+    } catch (e) {
+      console.warn('Could not save projects to localStorage', e);
+    }
+  };
+
+  // Keyboard shortcut listener for Cmd+K / Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -76,6 +112,76 @@ export default function NexusHome() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Handler: Ingest a newly uploaded local project
+  const handleProjectIngested = (newBundle: ProjectBundle) => {
+    setProjectBundles(prev => {
+      // If already exists with same id or slug, update it
+      const filtered = prev.filter(b => b.project.id !== newBundle.project.id && b.project.slug !== newBundle.project.slug);
+      const updated = [newBundle, ...filtered];
+      saveProjectsToStorage(updated);
+      return updated;
+    });
+    setActiveProjectId(newBundle.project.id);
+    setActiveView('overview');
+    setSelectedNode(null);
+  };
+
+  // Handler: Optional sample project loader (on demand only)
+  const handleLoadSampleProject = () => {
+    const sampleBundle: ProjectBundle = {
+      project: mockProjects[0],
+      graphNodes: mockGraphNodes,
+      graphEdges: mockGraphEdges,
+      tasks: mockTasks,
+      milestones: mockMilestones,
+      repository: mockRepository,
+      commits: mockCommits,
+      pullRequests: mockPullRequests,
+      projectMemory: mockProjectMemory,
+      researchPapers: mockResearchPapers,
+      architectureNodes: mockArchitectureNodes,
+      architectureEdges: mockArchitectureEdges,
+      fypSections: mockFYPSections,
+      vivaQuestions: mockVivaQuestions,
+      aiInsights: mockAIInsights,
+      activityEvents: mockActivityEvents,
+      testCases: mockTestCases,
+      benchmarks: mockBenchmarks
+    };
+    handleProjectIngested(sampleBundle);
+  };
+
+  // Extract active bundle
+  const activeBundle = projectBundles.find(b => b.project.id === activeProjectId) || projectBundles[0] || null;
+  const activeProject = activeBundle ? activeBundle.project : null;
+  const projectsList = projectBundles.map(b => b.project);
+
+  // Global nodes & edges for Universe view
+  const currentGlobalNodes: GraphNode[] = projectBundles.length > 0
+    ? projectBundles.map((b, idx) => ({
+        id: `global-${b.project.id}`,
+        label: b.project.name,
+        subtitle: `${b.project.progress}% Complete`,
+        type: 'project',
+        category: 'core',
+        x: Math.round(Math.cos((idx / projectBundles.length) * Math.PI * 2) * 260),
+        y: Math.round(Math.sin((idx / projectBundles.length) * Math.PI * 2) * 260),
+        progress: b.project.progress,
+        status: b.project.status,
+        techStack: b.project.tags
+      }))
+    : [];
+
+  const currentGlobalEdges: GraphEdge[] = projectBundles.length > 1
+    ? projectBundles.slice(1).map((b, i) => ({
+        id: `global-edge-${i}`,
+        source: `global-${projectBundles[0].project.id}`,
+        target: `global-${b.project.id}`,
+        label: 'shares engineering core',
+        type: 'dependency' as const
+      }))
+    : [];
 
   // Determine if active view belongs to an open project workspace
   const isProjectWorkspace = [
@@ -93,6 +199,72 @@ export default function NexusHome() {
     'analytics'
   ].includes(activeView);
 
+  // If still checking initial client storage, render sleek loader shell
+  if (!isLoadedFromStorage) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#050809] text-cyan-400 font-mono text-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+          <span>INITIALIZING NEXUS WORKSPACE...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // EMPTY STATE: If no projects uploaded yet, show EmptyWorkspaceView
+  if (projectBundles.length === 0) {
+    return (
+      <div className="flex h-screen w-screen overflow-hidden bg-[#050809] text-[#F3F4F6]">
+        {/* Simplified Sidebar */}
+        <Sidebar
+          activeView={activeView}
+          onSelectView={setActiveView}
+          activeProject={null}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          onOpenUploadModal={() => setIsUploadModalOpen(true)}
+        />
+
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+          <TopCommandBar
+            projects={[]}
+            activeProject={null}
+            onSelectProject={() => {}}
+            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+            onOpenUploadModal={() => setIsUploadModalOpen(true)}
+          />
+
+          <div className="flex-1 relative overflow-hidden flex">
+            <EmptyWorkspaceView
+              onProjectIngested={handleProjectIngested}
+              onOpenUploadModal={() => setIsUploadModalOpen(true)}
+              onLoadSampleProject={handleLoadSampleProject}
+            />
+          </div>
+        </div>
+
+        {/* Upload Modal */}
+        <UploadProjectModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setIsUploadModalOpen(false)}
+          onProjectIngested={handleProjectIngested}
+        />
+
+        {/* Command Palette */}
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          projects={[]}
+          tasks={[]}
+          onNavigateToView={(view) => setActiveView(view as NavView)}
+          onSelectProject={() => {}}
+          onOpenUploadModal={() => setIsUploadModalOpen(true)}
+        />
+      </div>
+    );
+  }
+
+  // ACTIVE WORKSPACE WITH UPLOADED USER PROJECT
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#050809] text-[#F3F4F6]">
       {/* Left Application Shell: Navigation Rail */}
@@ -105,23 +277,25 @@ export default function NexusHome() {
         activeProject={activeProject}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onOpenUploadModal={() => setIsUploadModalOpen(true)}
       />
 
       {/* Main Workspace Frame */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Top Command Bar */}
         <TopCommandBar
-          projects={mockProjects}
+          projects={projectsList}
           activeProject={activeProject}
           onSelectProject={(proj) => {
-            setActiveProject(proj);
+            setActiveProjectId(proj.id);
             setSelectedNode(null);
           }}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onOpenUploadModal={() => setIsUploadModalOpen(true)}
         />
 
-        {/* Project Detail Header & Tabs (Section 17) */}
-        {isProjectWorkspace && (
+        {/* Project Detail Header & Tabs */}
+        {isProjectWorkspace && activeProject && (
           <ProjectWorkspaceHeader
             project={activeProject}
             activeView={activeView}
@@ -136,20 +310,18 @@ export default function NexusHome() {
         <div className="flex-1 relative overflow-hidden flex">
           {/* Main Content Area */}
           <div className="flex-1 relative overflow-hidden flex flex-col">
-            {activeView === 'overview' && (
+            {activeView === 'overview' && activeBundle && (
               <div className="relative w-full h-full flex flex-col overflow-hidden">
-                {/* First-Launch Status Greeting Banner (Section 61) */}
+                {/* First-Launch Status Greeting Banner */}
                 {showStatusGreeting && (
                   <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-1.5 rounded-full glass-panel border border-cyan-500/30 text-xs shadow-2xl animate-in fade-in slide-in-from-top-2">
-                    <span className="text-cyan-400 font-mono font-semibold">Good evening.</span>
+                    <span className="text-cyan-400 font-mono font-semibold">Active: {activeProject?.name}</span>
                     <span className="text-slate-400">·</span>
-                    <span className="text-slate-300 font-mono">6 active projects</span>
+                    <span className="text-slate-300 font-mono">{activeBundle.graphNodes.length} graph nodes</span>
                     <span className="text-slate-500">·</span>
-                    <span className="text-amber-400 font-mono">3 tasks requiring attention</span>
+                    <span className="text-amber-400 font-mono">{activeBundle.tasks.filter(t => t.status === 'in_progress').length} active tasks</span>
                     <span className="text-slate-500">·</span>
-                    <span className="text-red-400 font-mono">2 blocked dependencies</span>
-                    <span className="text-slate-500">·</span>
-                    <span className="text-emerald-400 font-mono">1 upcoming milestone</span>
+                    <span className="text-emerald-400 font-mono">{activeBundle.milestones.length} milestones</span>
                     <button
                       onClick={() => setShowStatusGreeting(false)}
                       className="ml-2 text-slate-500 hover:text-white"
@@ -162,8 +334,8 @@ export default function NexusHome() {
                 {/* Hero Feature: Interactive Project Intelligence Graph */}
                 <div className="flex-1 relative w-full h-full">
                   <ProjectGraph
-                    nodes={mockGraphNodes}
-                    edges={mockGraphEdges}
+                    nodes={activeBundle.graphNodes}
+                    edges={activeBundle.graphEdges}
                     selectedNodeId={selectedNode?.id || null}
                     onSelectNode={(node) => setSelectedNode(node)}
                     onOpenDetails={(node) => {
@@ -186,88 +358,89 @@ export default function NexusHome() {
             {activeView === 'projects' && (
               <div className="flex-1 overflow-y-auto">
                 <ProjectsView
-                  projects={mockProjects}
+                  projects={projectsList}
                   activeProject={activeProject}
                   onSelectProject={(proj) => {
-                    setActiveProject(proj);
+                    setActiveProjectId(proj.id);
                     setActiveView('overview');
                   }}
                   onNavigateToView={(view) => setActiveView(view as NavView)}
+                  onOpenUploadModal={() => setIsUploadModalOpen(true)}
                 />
               </div>
             )}
 
-            {activeView === 'tasks' && (
+            {activeView === 'tasks' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
-                <TasksView tasks={mockTasks} />
+                <TasksView tasks={activeBundle.tasks} />
               </div>
             )}
 
-            {activeView === 'roadmap' && (
+            {activeView === 'roadmap' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
                 <RoadmapView
-                  milestones={mockMilestones}
+                  milestones={activeBundle.milestones}
                   onNavigateToView={(view) => setActiveView(view as NavView)}
                 />
               </div>
             )}
 
-            {activeView === 'repositories' && (
+            {activeView === 'repositories' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
                 <RepositoriesView
-                  repository={mockRepository}
-                  commits={mockCommits}
-                  pullRequests={mockPullRequests}
+                  repository={activeBundle.repository}
+                  commits={activeBundle.commits}
+                  pullRequests={activeBundle.pullRequests}
                 />
               </div>
             )}
 
-            {activeView === 'knowledge' && (
+            {activeView === 'knowledge' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
                 <KnowledgeView
-                  memoryItems={mockProjectMemory}
-                  papers={mockResearchPapers}
+                  memoryItems={activeBundle.projectMemory}
+                  papers={activeBundle.researchPapers}
                 />
               </div>
             )}
 
-            {activeView === 'research' && (
+            {activeView === 'research' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
-                <ResearchView papers={mockResearchPapers} />
+                <ResearchView papers={activeBundle.researchPapers} />
               </div>
             )}
 
-            {activeView === 'architecture' && (
+            {activeView === 'architecture' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
                 <ArchitectureView
-                  nodes={mockArchitectureNodes}
-                  edges={mockArchitectureEdges}
+                  nodes={activeBundle.architectureNodes}
+                  edges={activeBundle.architectureEdges}
                 />
               </div>
             )}
 
-            {activeView === 'testing' && (
+            {activeView === 'testing' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
                 <TestingView
-                  testCases={mockTestCases}
-                  benchmarks={mockBenchmarks}
+                  testCases={activeBundle.testCases}
+                  benchmarks={activeBundle.benchmarks}
                   onNavigateToView={(view) => setActiveView(view as NavView)}
                 />
               </div>
             )}
 
-            {activeView === 'fyp' && (
+            {activeView === 'fyp' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
                 <FYPView
-                  sections={mockFYPSections}
+                  sections={activeBundle.fypSections}
                   onNavigateToView={(view) => setActiveView(view as NavView)}
                 />
               </div>
             )}
 
-            {activeView === 'viva' && (
+            {activeView === 'viva' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
-                <VivaView questions={mockVivaQuestions} />
+                <VivaView questions={activeBundle.vivaQuestions} />
               </div>
             )}
 
@@ -280,11 +453,11 @@ export default function NexusHome() {
             {activeView === 'universe' && (
               <div className="flex-1 overflow-hidden">
                 <UniverseView
-                  nodes={mockGlobalNodes}
-                  edges={mockGlobalEdges}
-                  projects={mockProjects}
+                  nodes={currentGlobalNodes}
+                  edges={currentGlobalEdges}
+                  projects={projectsList}
                   onSelectProject={(proj) => {
-                    setActiveProject(proj);
+                    setActiveProjectId(proj.id);
                     setActiveView('overview');
                   }}
                   onNavigateToView={(view) => setActiveView(view as NavView)}
@@ -301,9 +474,9 @@ export default function NexusHome() {
               </div>
             )}
 
-            {activeView === 'activity' && (
+            {activeView === 'activity' && activeBundle && (
               <div className="flex-1 overflow-y-auto">
-                <ActivityView events={mockActivityEvents} />
+                <ActivityView events={activeBundle.activityEvents} />
               </div>
             )}
 
@@ -323,12 +496,12 @@ export default function NexusHome() {
             )}
           </div>
 
-          {/* Right Contextual Intelligence Panel (available on overview) */}
-          {activeView === 'overview' && (
+          {/* Right Contextual Intelligence Panel */}
+          {activeView === 'overview' && activeBundle && (
             <RightIntelligencePanel
               activeProject={activeProject}
               selectedNode={selectedNode}
-              insights={mockAIInsights}
+              insights={activeBundle.aiInsights}
               onClearSelection={() => setSelectedNode(null)}
               onNavigateToView={(view) => setActiveView(view as NavView)}
             />
@@ -336,17 +509,25 @@ export default function NexusHome() {
         </div>
       </div>
 
+      {/* Upload Local Project Modal */}
+      <UploadProjectModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onProjectIngested={handleProjectIngested}
+      />
+
       {/* Global Raycast Command Palette Modal */}
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        projects={mockProjects}
-        tasks={mockTasks}
+        projects={projectsList}
+        tasks={activeBundle ? activeBundle.tasks : []}
         onNavigateToView={(view) => setActiveView(view as NavView)}
         onSelectProject={(proj) => {
-          setActiveProject(proj);
+          setActiveProjectId(proj.id);
           setSelectedNode(null);
         }}
+        onOpenUploadModal={() => setIsUploadModalOpen(true)}
       />
     </div>
   );

@@ -288,3 +288,24 @@ export interface TestingBenchmark {
   status: 'optimal' | 'warning' | 'critical';
 }
 
+export interface ProjectBundle {
+  project: Project;
+  graphNodes: GraphNode[];
+  graphEdges: GraphEdge[];
+  tasks: Task[];
+  milestones: Milestone[];
+  repository: Repository;
+  commits: Commit[];
+  pullRequests: PullRequest[];
+  projectMemory: ProjectMemory[];
+  researchPapers: ResearchPaper[];
+  architectureNodes: ArchitectureNode[];
+  architectureEdges: ArchitectureEdge[];
+  fypSections: FYPSection[];
+  vivaQuestions: VivaQuestion[];
+  aiInsights: AIInsight[];
+  activityEvents: ActivityEvent[];
+  testCases: TestCase[];
+  benchmarks: TestingBenchmark[];
+}
+

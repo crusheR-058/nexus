@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 interface AICommandBarProps {
-  activeProject: Project;
+  activeProject?: Project | null;
   onNavigateToView: (view: string) => void;
 }
 
@@ -41,6 +41,7 @@ export default function AICommandBar({
   activeProject,
   onNavigateToView
 }: AICommandBarProps) {
+  if (!activeProject) return null;
   const [query, setQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeResponse, setActiveResponse] = useState<AIResponse | null>(null);

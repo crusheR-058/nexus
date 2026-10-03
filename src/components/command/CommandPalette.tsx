@@ -18,7 +18,8 @@ import {
   ArrowRight, 
   X,
   PlusCircle,
-  Cpu
+  Cpu,
+  FolderUp
 } from 'lucide-react';
 
 interface CommandPaletteProps {
@@ -28,6 +29,7 @@ interface CommandPaletteProps {
   tasks: Task[];
   onNavigateToView: (view: string) => void;
   onSelectProject: (project: Project) => void;
+  onOpenUploadModal?: () => void;
 }
 
 export default function CommandPalette({
@@ -36,7 +38,8 @@ export default function CommandPalette({
   projects,
   tasks,
   onNavigateToView,
-  onSelectProject
+  onSelectProject,
+  onOpenUploadModal
 }: CommandPaletteProps) {
   const [search, setSearch] = useState('');
 
@@ -58,6 +61,7 @@ export default function CommandPalette({
   if (!isOpen) return null;
 
   const quickActions = [
+    { id: 'upload', label: 'Upload Local Project Directory', category: 'Workspace', icon: FolderUp, target: 'upload' },
     { id: 'viva', label: 'Start Viva Defense Simulation', category: 'Superpower', icon: Award, target: 'viva' },
     { id: 'fyp', label: 'Open FYP 16-Chapter Progress Tracker', category: 'Superpower', icon: BookOpen, target: 'fyp' },
     { id: 'portfolio', label: 'Generate Portfolio & Documentation', category: 'Publish', icon: FileText, target: 'portfolio' },
@@ -122,7 +126,11 @@ export default function CommandPalette({
                     <button
                       key={action.id}
                       onClick={() => {
-                        onNavigateToView(action.target);
+                        if (action.target === 'upload') {
+                          onOpenUploadModal?.();
+                        } else {
+                          onNavigateToView(action.target);
+                        }
                         onClose();
                       }}
                       className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-cyan-500/20 hover:border-cyan-500/30 border border-transparent transition-all group"
